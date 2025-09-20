@@ -152,6 +152,26 @@ elif section == "Performance Analysis":
 #     })
 #     st.dataframe(data)
 
+# 4. District Comparison      
+elif section == "District Comparison":
+    st.header("District Comparison")
+    col1, col2 = st.columns(2)
+    with col1:
+        dist1 = st.selectbox("Select District 1", df['District'].unique())
+    with col2:
+        dist2 = st.selectbox("Select District 2", df['District'].unique(), index=1)
+
+    d1 = df[df['District'] == dist1].iloc[0]
+    d2 = df[df['District'] == dist2].iloc[0]
+
+    metrics = ['OL_Percent_2019', 'AL_Percent_2020', 'Performance_Score', 'STR_2020']
+    data = pd.DataFrame({
+        'Metric': metrics,
+        dist1: [d1[m] for m in metrics],
+        dist2: [d2[m] for m in metrics]
+    })
+    st.dataframe(data)
+    
 # 5. Insights & Recommendations
 elif section == "Insights & Recommendations":
     st.header("📌 Insights & Recommendations")
