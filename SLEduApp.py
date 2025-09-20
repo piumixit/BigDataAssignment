@@ -3,17 +3,47 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# Load data
 @st.cache_data
 def load_data():
-    df = pd.read_csv("sri_lanka_education.csv")
-    # Clean columns: remove commas if any, convert to numeric
-    for col in df.columns:
-        if df[col].dtype == 'object':
-            df[col] = df[col].str.replace(',', '').astype(float, errors='ignore')
-    return df
+    try:
+        # Read CSV with thousands separator handled
+        df = pd.read_csv('data/merged_dataset.csv', thousands=',')
 
+        # Clean column names (remove leading/trailing spaces)
+        df.columns = df.columns.str.strip()
+
+        # List of columns to convert to numeric (if present)
+        numeric_cols = [
+            'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 
+            'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11-1st', 
+            'Grade 11 repeaters', 'Grade 12', 'Grade 13', 'Special education', 
+            'Total', 'Total_Teachers', 'Male_Teachers', 'Female_Teachers',
+            'Male_Percentage', 'Female_Percentage', 'STR_2015', 'STR_2020',
+            'OL_Sat_2015', 'OL_Passed_2015', 'OL_Percent_2015', 'OL_Sat_2019',
+            'OL_Passed_2019', 'OL_Percent_2019', 'AL_Sat_2015', 'AL_Eligible_2015',
+            'AL_Percent_2015', 'AL_Sat_2020', 'AL_Eligible_2020', 'AL_Percent_2020'
+        ]
+
+        # Convert these columns to numeric, coercing errors to NaN
+        for col in numeric_cols:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+
+        # Calculate composite performance score as average of OL 2019 and AL 2020 pass percentages
+        df['Performance_Score'] = (df['OL_Percent_2019'] + df['AL_Percent_2020']) / 2
+
+        # Calculate a "Resource Need Index" which increases with higher STR and lower performance
+        df['Resource_Need_Index'] = df['STR_2020'] * (100 - df['Performance_Score']) / 100
+
+        return df
+
+    except Exception as e:
+        st.error(f"Error loading data: {e}")
+        return pd.DataFrame()
+
+# Usage example:
 df = load_data()
+
 
 st.title("Sri Lanka Education Analysis: Teacher Availability & Academic Performance")
 
