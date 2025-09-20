@@ -14,7 +14,7 @@ spark = init_spark()
 st.title("PySpark Analysis in Streamlit")
 
 # Load CSV from local repo path (adjust path as needed)
-csv_path = "data/sample.csv"  # put your csv file here in the repo under data/
+csv_path = "data/merged_dataset.csv"  # put your csv file here in the repo under data/
 
 try:
     df = spark.read.option("header", True).csv(csv_path)
