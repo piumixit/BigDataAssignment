@@ -120,37 +120,37 @@ elif section == "Performance Analysis":
                 st.plotly_chart(fig)
 
 # 3. Resource Allocation
-elif section == "Resource Allocation":
-    st.header("Resource Allocation Analysis")
-    st.subheader("STR vs Performance")
-    if plotly_available:
-        fig = px.scatter(df, x='STR_2020', y='Performance_Score', size='Total',
-                         color='District', hover_data=['OL_Percent_2019', 'AL_Percent_2020'])
-        st.plotly_chart(fig)
+# elif section == "Resource Allocation":
+#     st.header("Resource Allocation Analysis")
+#     st.subheader("STR vs Performance")
+#     if plotly_available:
+#         fig = px.scatter(df, x='STR_2020', y='Performance_Score', size='Total',
+#                          color='District', hover_data=['OL_Percent_2019', 'AL_Percent_2020'])
+#         st.plotly_chart(fig)
 
-    st.subheader("High STR & Low Performance Districts")
-    high_str_low_perf = df[(df['STR_2020'] > 30) & (df['Performance_Score'] < 60)]
-    st.dataframe(high_str_low_perf[['District', 'STR_2020', 'Performance_Score', 'Total_Teachers']])
+#     st.subheader("High STR & Low Performance Districts")
+#     high_str_low_perf = df[(df['STR_2020'] > 30) & (df['Performance_Score'] < 60)]
+#     st.dataframe(high_str_low_perf[['District', 'STR_2020', 'Performance_Score', 'Total_Teachers']])
 
-# 4. District Comparison
-elif section == "District Comparison":
-    st.header("District Comparison")
-    col1, col2 = st.columns(2)
-    with col1:
-        dist1 = st.selectbox("Select District 1", df['District'].unique())
-    with col2:
-        dist2 = st.selectbox("Select District 2", df['District'].unique(), index=1)
+# # 4. District Comparison
+# elif section == "District Comparison":
+#     st.header("District Comparison")
+#     col1, col2 = st.columns(2)
+#     with col1:
+#         dist1 = st.selectbox("Select District 1", df['District'].unique())
+#     with col2:
+#         dist2 = st.selectbox("Select District 2", df['District'].unique(), index=1)
 
-    d1 = df[df['District'] == dist1].iloc[0]
-    d2 = df[df['District'] == dist2].iloc[0]
+#     d1 = df[df['District'] == dist1].iloc[0]
+#     d2 = df[df['District'] == dist2].iloc[0]
 
-    metrics = ['OL_Percent_2019', 'AL_Percent_2020', 'Performance_Score', 'STR_2020']
-    data = pd.DataFrame({
-        'Metric': metrics,
-        dist1: [d1[m] for m in metrics],
-        dist2: [d2[m] for m in metrics]
-    })
-    st.dataframe(data)
+#     metrics = ['OL_Percent_2019', 'AL_Percent_2020', 'Performance_Score', 'STR_2020']
+#     data = pd.DataFrame({
+#         'Metric': metrics,
+#         dist1: [d1[m] for m in metrics],
+#         dist2: [d2[m] for m in metrics]
+#     })
+#     st.dataframe(data)
 
 # 5. Insights & Recommendations
 elif section == "Insights & Recommendations":
