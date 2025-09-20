@@ -1,120 +1,165 @@
-import streamlit as st
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
+# Resource Allocation section
+elif section == "Resource Allocation":
+    st.header("Resource Allocation Analysis")
+    
+    st.subheader("Student-Teacher Ratio (STR) Distribution")
+    if plotly_available:
+        fig = px.histogram(df, x='STR_2020', nbins=20, 
+                           title='Distribution of Student-Teacher Ratio (2020)', 
+                           labels={'STR_2020': 'Student-Teacher Ratio (2020)'},
+                           color_discrete_sequence=['#636EFA'])
+        st.plotly_chart(fig, use_container_width=True)
+    elif matplotlib_available:
+        fig, ax = plt.subplots()
+        sns.histplot(df['STR_2020'].dropna(), bins=20, ax=ax, color='blue')
+        ax.set_title('Distribution of Student-Teacher Ratio (2020)')
+        ax.set_xlabel('Student-Teacher Ratio (2020)')
+        ax.set_ylabel('Count')
+        st.pyplot(fig)
+    else:
+        st.write(df[['District', 'STR_2020']].sort_values('STR_2020'))
 
-@st.cache_data
-def load_data():
-    try:
-        # Read CSV with thousands separator handled
-        df = pd.read_csv('data/merged_dataset.csv', thousands=',')
+    st.subheader("Teacher Gender Distribution")
+    gender_data = df[['District', 'Male_Teachers', 'Female_Teachers']].set_index('District')
+    gender_data = gender_data.fillna(0)
+    
+    if plotly_available:
+        fig = go.Figure()
+        fig.add_trace(go.Bar(name='Male Teachers', x=gender_data.index, y=gender_data['Male_Teachers']))
+        fig.add_trace(go.Bar(name='Female Teachers', x=gender_data.index, y=gender_data['Female_Teachers']))
+        fig.update_layout(barmode='stack', title='Teacher Gender Distribution by District',
+                          xaxis_title='District', yaxis_title='Number of Teachers')
+        st.plotly_chart(fig, use_container_width=True)
+    elif matplotlib_available:
+        fig, ax = plt.subplots(figsize=(10,6))
+        gender_data.plot(kind='bar', stacked=True, ax=ax)
+        ax.set_title('Teacher Gender Distribution by District')
+        ax.set_xlabel('District')
+        ax.set_ylabel('Number of Teachers')
+        st.pyplot(fig)
+    else:
+        st.dataframe(gender_data)
 
-        # Clean column names (remove leading/trailing spaces)
-        df.columns = df.columns.str.strip()
+    st.subheader("Resource Need Index")
+    sorted_resource_need = df.sort_values('Resource_Need_Index', ascending=False)[['District', 'Resource_Need_Index']]
+    st.dataframe(sorted_resource_need)
+    
+    if plotly_available:
+        fig = px.bar(sorted_resource_need, x='Resource_Need_Index', y='District', orientation='h',
+                     title='Resource Need Index by District', color='Resource_Need_Index',
+                     color_continuous_scale='Viridis')
+        st.plotly_chart(fig, use_container_width=True)
 
-        # List of columns to convert to numeric (if present)
-        numeric_cols = [
-            'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 
-            'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11-1st', 
-            'Grade 11 repeaters', 'Grade 12', 'Grade 13', 'Special education', 
-            'Total', 'Total_Teachers', 'Male_Teachers', 'Female_Teachers',
-            'Male_Percentage', 'Female_Percentage', 'STR_2015', 'STR_2020',
-            'OL_Sat_2015', 'OL_Passed_2015', 'OL_Percent_2015', 'OL_Sat_2019',
-            'OL_Passed_2019', 'OL_Percent_2019', 'AL_Sat_2015', 'AL_Eligible_2015',
-            'AL_Percent_2015', 'AL_Sat_2020', 'AL_Eligible_2020', 'AL_Percent_2020'
-        ]
+# District Comparison section
+elif section == "District Comparison":
+    st.header("District Comparison")
 
-        # Convert these columns to numeric, coercing errors to NaN
-        for col in numeric_cols:
-            if col in df.columns:
-                df[col] = pd.to_numeric(df[col], errors='coerce')
+    districts = df['District'].unique()
+    selected_districts = st.multiselect("Select districts to compare", districts, default=districts[:3])
 
-        # Calculate composite performance score as average of OL 2019 and AL 2020 pass percentages
-        df['Performance_Score'] = (df['OL_Percent_2019'] + df['AL_Percent_2020']) / 2
+    if selected_districts:
+        comp_df = df[df['District'].isin(selected_districts)].set_index('District')
 
-        # Calculate a "Resource Need Index" which increases with higher STR and lower performance
-        df['Resource_Need_Index'] = df['STR_2020'] * (100 - df['Performance_Score']) / 100
+        st.subheader("Key Metrics Comparison")
+        metrics = ['Total', 'Total_Teachers', 'STR_2020', 'OL_Percent_2019', 'AL_Percent_2020', 'Resource_Need_Index']
+        comp_metrics = comp_df[metrics]
 
-        return df
+        st.dataframe(comp_metrics.style.format({
+            'Total': '{:,.0f}',
+            'Total_Teachers': '{:,.0f}',
+            'STR_2020': '{:.1f}',
+            'OL_Percent_2019': '{:.1f}%',
+            'AL_Percent_2020': '{:.1f}%',
+            'Resource_Need_Index': '{:.2f}'
+        }))
 
-    except Exception as e:
-        st.error(f"Error loading data: {e}")
-        return pd.DataFrame()
+        if plotly_available:
+            st.subheader("Visual Comparison")
+            fig = make_subplots(rows=2, cols=1, subplot_titles=("OL Pass Rate (2019)", "AL Eligibility Rate (2020)"))
+            for district in selected_districts:
+                fig.add_trace(go.Bar(name=district, x=['OL Pass Rate'], y=[comp_df.loc[district, 'OL_Percent_2019']]), row=1, col=1)
+                fig.add_trace(go.Bar(name=district, x=['AL Eligibility Rate'], y=[comp_df.loc[district, 'AL_Percent_2020']]), row=2, col=1)
+            fig.update_layout(barmode='group', height=600)
+            st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("Please select at least one district to compare.")
 
-# Usage example:
-df = load_data()
+# Insights & Recommendations section
+elif section == "Insights & Recommendations":
+    st.header("Insights & Recommendations")
 
+    st.markdown("### Data-Driven District Recommendations")
 
-st.title("Sri Lanka Education Analysis: Teacher Availability & Academic Performance")
+    # Define thresholds
+    low_ol_threshold = 60  # OL pass rate below this is considered low
+    high_str_threshold = 30  # STR above this is considered high
+    gender_imbalance_threshold = 60  # % of one gender above which imbalance exists
 
-# Sidebar filters
-districts = df['District'].unique()
-selected_district = st.sidebar.selectbox("Select District", districts)
+    # Districts with low OL pass rate and high STR
+    low_perf_high_str = df[(df['OL_Percent_2019'] < low_ol_threshold) & (df['STR_2020'] > high_str_threshold)]
 
-# Filter data for selected district
-district_data = df[df['District'] == selected_district].iloc[0]
+    if not low_perf_high_str.empty:
+        st.subheader("Districts Needing Urgent Academic & Resource Support")
+        for _, row in low_perf_high_str.iterrows():
+            st.markdown(
+                f"**{row['District']}** has an OL pass rate of {row['OL_Percent_2019']:.1f}% "
+                f"and a high student-teacher ratio of {row['STR_2020']:.1f}. "
+                "It is recommended to increase teacher recruitment and implement targeted academic programs."
+            )
+    else:
+        st.info("No districts found with both low OL pass rates and high student-teacher ratios.")
 
-# Enrollment visualization
-st.header(f"Overview: {selected_district}")
+    # Districts with gender imbalance in teachers
+    gender_imbalance = df[(df['Female_Percentage'] > gender_imbalance_threshold) | (df['Male_Percentage'] > gender_imbalance_threshold)]
+    if not gender_imbalance.empty:
+        st.subheader("Districts with Gender Imbalance in Teaching Staff")
+        for _, row in gender_imbalance.iterrows():
+            dominant_gender = "female" if row['Female_Percentage'] > gender_imbalance_threshold else "male"
+            st.markdown(
+                f"**{row['District']}** has {row['Female_Percentage']:.1f}% female teachers "
+                f"and {row['Male_Percentage']:.1f}% male teachers, indicating a strong {dominant_gender} teacher dominance. "
+                "Consider policies to promote balanced gender recruitment."
+            )
+    else:
+        st.info("No significant gender imbalance detected in teaching staff across districts.")
 
-grades = [f'Grade {i}' for i in range(1, 14)] + ['Grade 11-1st', 'Grade 11 repeaters', 'Special education']
-enrollment = district_data[grades]
+    # Districts showing improvement in OL performance (2015 to 2019)
+    df['OL_Improvement'] = df['OL_Percent_2019'] - df['OL_Percent_2015']
+    improving_districts = df[df['OL_Improvement'] > 5].sort_values('OL_Improvement', ascending=False)
+    if not improving_districts.empty:
+        st.subheader("Districts Showing Significant OL Performance Improvement")
+        for _, row in improving_districts.iterrows():
+            st.markdown(
+                f"**{row['District']}** improved OL pass rates by {row['OL_Improvement']:.1f}% "
+                "from 2015 to 2019. Recommend continuing current support strategies."
+            )
+    else:
+        st.info("No districts showed significant OL pass rate improvement from 2015 to 2019.")
+    
+    st.markdown("""
+    ### Key Insights:
+    - Districts with **high Student-Teacher Ratios (STR)** generally have lower pass rates in both OL and AL exams.
+    - The **Resource Need Index** highlights districts where increased teacher allocation could improve student outcomes.
+    - Some districts show improving trends in exam pass rates, indicating the success of recent interventions.
+    - Gender distribution among teachers varies widely; promoting gender balance could enhance teaching environments.
+    
+    ### Recommendations:
+    1. **Targeted Resource Allocation:** Prioritize districts with high Resource Need Index scores for teacher recruitment and training.
+    2. **Monitor and Support Low Performing Districts:** Implement focused academic programs in districts below performance thresholds.
+    3. **Encourage Gender Balance in Teaching Staff:** Support policies that promote female teacher recruitment where underrepresented.
+    4. **Continuous Data Monitoring:** Maintain up-to-date data collection to track performance trends and resource allocation impact.
+    
+    ### Next Steps:
+    - Engage with district education officers to validate findings and tailor interventions.
+    - Expand dataset to include private schools and additional years for comprehensive analysis.
+    - Incorporate qualitative feedback from teachers and students for holistic understanding.
+    """)
 
-st.write("### Enrollment by Grade")
-st.bar_chart(enrollment)
-
-# Teacher availability
-st.write("### Teacher Availability")
-st.write(f"Total Teachers: {int(district_data['Total_Teachers'])}")
-st.write(f"Male Teachers: {int(district_data['Male_Teachers'])} ({district_data['Male_Percentage']:.1f}%)")
-st.write(f"Female Teachers: {int(district_data['Female_Teachers'])} ({district_data['Female_Percentage']:.1f}%)")
-
-# STR
-st.write("### Student-Teacher Ratio")
-st.write(f"2015: {district_data['STR_2015']}")
-st.write(f"2020: {district_data['STR_2020']}")
-
-# OL results
-st.write("### Academic Performance: Ordinary Level (OL)")
-st.write(f"2015 OL Pass Percentage: {district_data['OL_Percent_2015']}% (Sat: {int(district_data['OL_Sat_2015'])}, Passed: {int(district_data['OL_Passed_2015'])})")
-st.write(f"2019 OL Pass Percentage: {district_data['OL_Percent_2019']}% (Sat: {int(district_data['OL_Sat_2019'])}, Passed: {int(district_data['OL_Passed_2019'])})")
-
-# AL results
-st.write("### Academic Performance: Advanced Level (AL)")
-st.write(f"2015 AL Pass Percentage: {district_data['AL_Percent_2015']}% (Sat: {int(district_data['AL_Sat_2015'])}, Eligible: {int(district_data['AL_Eligible_2015'])})")
-st.write(f"2020 AL Pass Percentage: {district_data['AL_Percent_2020']}% (Sat: {int(district_data['AL_Sat_2020'])}, Eligible: {int(district_data['AL_Eligible_2020'])})")
-
-# Correlations plots
-st.header("Correlation between Student-Teacher Ratio and Academic Performance")
-
-fig, ax = plt.subplots()
-sns.scatterplot(data=df, x='STR_2020', y='OL_Percent_2019', ax=ax)
-ax.set_xlabel("Student-Teacher Ratio 2020")
-ax.set_ylabel("OL Pass Percentage 2019")
-ax.set_title("OL Pass % vs STR (2020)")
-st.pyplot(fig)
-
-fig2, ax2 = plt.subplots()
-sns.scatterplot(data=df, x='STR_2020', y='AL_Percent_2020', ax=ax2)
-ax2.set_xlabel("Student-Teacher Ratio 2020")
-ax2.set_ylabel("AL Pass Percentage 2020")
-ax2.set_title("AL Pass % vs STR (2020)")
-st.pyplot(fig2)
-
-# Highlight problematic districts
-st.header("Districts with High STR & Low Academic Performance")
-
-threshold_str = st.sidebar.slider("Max Acceptable STR", min_value=10.0, max_value=40.0, value=25.0)
-threshold_pass = st.sidebar.slider("Minimum Pass Rate (%)", min_value=30, max_value=100, value=70)
-
-problematic = df[(df['STR_2020'] > threshold_str) & ((df['OL_Percent_2019'] < threshold_pass) | (df['AL_Percent_2020'] < threshold_pass))]
-
-st.dataframe(problematic[['District', 'STR_2020', 'OL_Percent_2019', 'AL_Percent_2020']])
-
-st.write("""
-### Recommendations:
-- Allocate more teachers to districts with high STR and low pass rates.
-- Investigate underlying causes of low teacher availability or high student enrollment.
-- Monitor gender distribution of teachers to support diversity.
-- Plan resource allocation based on enrollment trends.
-""")
+    # Overall summary recommendations
+    st.markdown("""
+    ### Summary Recommendations
+    - Prioritize teacher allocation and academic interventions in districts with both low performance and high STR.
+    - Promote gender-balanced recruitment in districts with strong gender dominance among teachers.
+    - Recognize and support districts with improving performance trends to sustain momentum.
+    - Maintain continuous monitoring to track progress and adjust strategies accordingly.
+    """)
