@@ -156,22 +156,33 @@ elif section == "District Comparison":
 elif section == "Insights & Recommendations":
     st.header("📌 Insights & Recommendations")
 
-    st.subheader("🔻 Insight 1: Lowest Performing Districts")
+    st.subheader("Lowest Performing Districts(Performance Score is less than 50")
     low_perf = df[df['Performance_Score'] < 50].sort_values('Performance_Score')
     if not low_perf.empty:
         st.dataframe(low_perf[['District', 'Performance_Score']])
         d = low_perf.iloc[0]
         st.markdown(f"👉 **{d['District']}** has the lowest score: **{d['Performance_Score']:.1f}**.")
-
-    st.subheader("⚠️ Insight 2: High STR & Low Performance")
+        
+    st.subheader("Lowest Performing Districts(Performance Score is less than 60")
+    low_perf = df[df['Performance_Score'] < 60].sort_values('Performance_Score')
+    if not low_perf.empty:
+        st.dataframe(low_perf[['District', 'Performance_Score']])
+        d = low_perf.iloc[0]
+        st.markdown(f"👉 **{d['District']}** has the lowest score: **{d['Performance_Score']:.1f}**.")
+    
+    st.subheader("High STR & Low Performance")
     prob = df[(df['STR_2020'] > 30) & (df['Performance_Score'] < 60)]
     st.dataframe(prob[['District', 'STR_2020', 'Performance_Score']])
 
-    st.subheader("✅ Insight 3: High Performance, Low STR")
+    st.subheader("Low Performance, Low STR")
+    good = df[(df['STR_2020'] < 20) & (df['Performance_Score'] < 60)]
+    st.dataframe(good[['District', 'STR_2020', 'Performance_Score']])
+
+    st.subheader("High Performance, Low STR")
     good = df[(df['STR_2020'] < 20) & (df['Performance_Score'] > 70)]
     st.dataframe(good[['District', 'STR_2020', 'Performance_Score']])
 
-    st.subheader("📊 Insight 4: Teacher Allocation vs Performance")
+    st.subheader("Teacher Allocation vs Performance")
     corr = df['Total_Teachers'].corr(df['Performance_Score'])
     st.metric("Correlation", f"{corr:.2f}")
     if plotly_available:
