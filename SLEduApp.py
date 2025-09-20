@@ -3,13 +3,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# Remove deprecated option since it causes errors
-# st.set_option('deprecation.showPyplotGlobalUse', False)
-
 @st.cache_data
 def load_data():
     df = pd.read_csv('data/merged_dataset.csv')
-    # Clean columns: remove commas, replace 'NULL', convert to numeric
     for col in df.columns[1:]:
         df[col] = df[col].astype(str).str.replace(',', '').replace('NULL', '').fillna('0')
         df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
