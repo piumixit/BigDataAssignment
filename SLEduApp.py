@@ -3,13 +3,13 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-st.set_option('deprecation.showPyplotGlobalUse', False)
+# Remove deprecated option since it causes errors
+# st.set_option('deprecation.showPyplotGlobalUse', False)
 
 @st.cache_data
 def load_data():
-    url = "https://raw.githubusercontent.com/piumixit/BigDataAssignment/main/data/merged_dataset.csv"
-    df = pd.read_csv(url)
-    # Clean columns if needed, remove commas in numeric columns, convert to numeric
+    df = pd.read_csv('data/merged_dataset.csv')
+    # Clean columns: remove commas, replace 'NULL', convert to numeric
     for col in df.columns[1:]:
         df[col] = df[col].astype(str).str.replace(',', '').replace('NULL', '').fillna('0')
         df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
@@ -52,7 +52,7 @@ plt.xticks(rotation=45)
 plt.ylabel('Number of Students')
 st.pyplot(fig)
 
-# Correlation heatmap for entire dataset (interactive)
+# Correlation heatmap for entire dataset
 st.header("Correlation Analysis (All Districts)")
 numeric_cols = ['Total', 'Total_Teachers', 'STR_2020', 'OL_Percent_2019', 'OL_Percent_2015', 'AL_Percent_2015', 'AL_Percent_2020']
 corr = df[numeric_cols].corr()
@@ -77,7 +77,7 @@ st.markdown("""
 Districts with **O-Level pass percentage below 60%** and **Student-Teacher Ratio above 20** are potential focus areas for resource reallocation.
 """)
 
-# Suggestion box
+# Recommendations
 st.header("Recommendations")
 
 if not low_performance.empty:
@@ -88,4 +88,3 @@ if not low_performance.empty:
     """)
 else:
     st.write("No critical districts identified based on current criteria.")
-
