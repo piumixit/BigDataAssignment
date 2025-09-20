@@ -1,86 +1,91 @@
 import streamlit as st
-from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, regexp_replace, avg
-import plotly.express as px
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
 
-# Initialize Spark
-spark = SparkSession.builder.appName("SL_Education_Analysis").getOrCreate()
+st.set_option('deprecation.showPyplotGlobalUse', False)
 
 @st.cache_data
-def load_data(file_path):
-    df = spark.read.option("header", True).csv(file_path)
-    numeric_cols = [c for c in df.columns if c not in ['District', 'Sex', 'Gender']]
-    for col_name in numeric_cols:
-        df = df.withColumn(col_name, regexp_replace(col(col_name), ",", "").cast("float"))
+def load_data():
+    url = "https://raw.githubusercontent.com/piumixit/BigDataAssignment/main/data/merged_dataset.csv"
+    df = pd.read_csv(url)
+    # Clean columns if needed, remove commas in numeric columns, convert to numeric
+    for col in df.columns[1:]:
+        df[col] = df[col].astype(str).str.replace(',', '').replace('NULL', '').fillna('0')
+        df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
     return df
 
-# Analysis functions
-def calculate_correlations(df, col1, col2):
-    return df.stat.corr(col1, col2)
+df = load_data()
 
-def identify_low_performance_districts(df, pass_col="OL_Percent_2019", threshold=None):
-    if threshold is None:
-        threshold = df.select(avg(pass_col)).collect()[0][0]
-    low_perf_df = df.filter(col(pass_col) < threshold).select("District", pass_col).toPandas()
-    return low_perf_df, threshold
-
-def enrollment_teacher_summary(df):
-    summary = df.select(
-        "District",
-        col("Total").alias("Total_Enrollment"),
-        col("Total_Teachers"),
-        col("STR_2020")
-    ).toPandas()
-    return summary
-
-# Visualization functions
-def plot_str_vs_pass(df_pandas):
-    fig = px.scatter(df_pandas, x="STR_2020", y="OL_Percent_2019",
-                     hover_name="District",
-                     title="Student Teacher Ratio vs OL Pass Percentage (2019)",
-                     labels={"STR_2020": "Student Teacher Ratio (2020)",
-                             "OL_Percent_2019": "OL Pass Percentage (2019)"})
-    return fig
-
-def plot_enrollment_bar(df_pandas):
-    fig = px.bar(df_pandas.sort_values("Total_Enrollment", ascending=False),
-                 x="District", y="Total_Enrollment",
-                 title="Enrollment by District",
-                 labels={"Total_Enrollment": "Total Enrollment"})
-    return fig
-
-# Main app starts here
-st.title("Sri Lanka Education Dashboard")
-
-data_path = "data/merged_dataset.csv"
-df = load_data(data_path)
+st.title("Sri Lanka Education Performance Dashboard")
+st.markdown("""
+Improving student academic performance and resource allocation in government schools by analyzing enrollment, teacher availability, and exam results across districts.
+""")
 
 # Sidebar filters
-districts = [row['District'] for row in df.select("District").distinct().collect()]
-selected_district = st.sidebar.selectbox("Select District", ["All"] + districts)
+districts = df['District'].unique()
+selected_district = st.sidebar.selectbox("Select District", districts)
+selected_data = df[df['District'] == selected_district]
 
-# Show correlations
-corr_str_pass = calculate_correlations(df, "STR_2020", "OL_Percent_2019")
-st.write(f"**Correlation between Student-Teacher Ratio (2020) and OL Pass % (2019):** {corr_str_pass:.2f}")
+# Show district summary
+st.header(f"Summary for {selected_district}")
+total_students = selected_data['Total'].values[0]
+total_teachers = selected_data['Total_Teachers'].values[0]
+str_2020 = selected_data['STR_2020'].values[0]
+ol_pass_percent_2019 = selected_data['OL_Percent_2019'].values[0]
 
-# Identify low performing districts
-low_perf_df, threshold = identify_low_performance_districts(df)
-st.subheader(f"Districts with OL Pass % below average ({threshold:.2f}%)")
-st.dataframe(low_perf_df)
+st.markdown(f"""
+- Total Students: **{total_students:,}**
+- Total Teachers: **{total_teachers:,}**
+- Student-Teacher Ratio (2020): **{str_2020}**
+- O-Level Pass Percentage (2019): **{ol_pass_percent_2019}%**
+""")
 
-# Enrollment summary
-summary_df = enrollment_teacher_summary(df)
+# Visualize enrollment trends across grades
+grades = ['Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Grade 10','Grade 11-1st','Grade 11 repeaters','Grade 12','Grade 13']
 
-# Filter summary if district selected
-if selected_district != "All":
-    summary_df = summary_df[summary_df["District"] == selected_district]
+st.subheader("Enrollment by Grade")
+enrollment = selected_data[grades].iloc[0]
+fig, ax = plt.subplots(figsize=(10, 5))
+sns.barplot(x=grades, y=enrollment, ax=ax)
+plt.xticks(rotation=45)
+plt.ylabel('Number of Students')
+st.pyplot(fig)
 
-st.subheader("Enrollment and Teacher Summary")
-st.dataframe(summary_df)
+# Correlation heatmap for entire dataset (interactive)
+st.header("Correlation Analysis (All Districts)")
+numeric_cols = ['Total', 'Total_Teachers', 'STR_2020', 'OL_Percent_2019', 'OL_Percent_2015', 'AL_Percent_2015', 'AL_Percent_2020']
+corr = df[numeric_cols].corr()
 
-# Plot enrollment bar (all districts)
-if selected_district == "All":
-    st.plotly_chart(plot_enrollment_bar(summary_df))
+fig2, ax2 = plt.subplots(figsize=(8, 6))
+sns.heatmap(corr, annot=True, cmap='coolwarm', ax=ax2)
+st.pyplot(fig2)
 
-# Plot STR vs OL Pass % scatter plot
-st.plotly_chart(plot_str_vs_pass(df.toPandas()))
+st.markdown("""
+### Insights:
+- Check positive/negative correlations between student-teacher ratio and exam performance.
+- Identify districts with low pass percentages and high STR to optimize resource allocation.
+""")
+
+# Identify districts with low performance and high STR
+st.header("Districts Needing Attention")
+
+low_performance = df[(df['OL_Percent_2019'] < 60) & (df['STR_2020'] > 20)][['District','OL_Percent_2019','STR_2020']]
+st.dataframe(low_performance)
+
+st.markdown("""
+Districts with **O-Level pass percentage below 60%** and **Student-Teacher Ratio above 20** are potential focus areas for resource reallocation.
+""")
+
+# Suggestion box
+st.header("Recommendations")
+
+if not low_performance.empty:
+    st.write("""
+    - Allocate more teachers to districts with high student-teacher ratios and low pass rates.
+    - Monitor enrollment trends to predict future staffing needs.
+    - Invest in targeted academic interventions in low performing districts.
+    """)
+else:
+    st.write("No critical districts identified based on current criteria.")
+
