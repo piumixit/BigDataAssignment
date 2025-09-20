@@ -81,8 +81,7 @@ section = st.sidebar.radio("Go to",
                           ["Overview", "Performance Analysis", "Resource Allocation", 
                            "District Comparison", "Insights & Recommendations"])
 
-# ========== Sections ==========
-
+# Overview section
 if section == "Overview":
     st.header("Dataset Overview")
     
@@ -104,6 +103,7 @@ if section == "Overview":
     st.dataframe(df[['District', 'Total', 'Total_Teachers', 'STR_2020', 
                     'OL_Percent_2019', 'AL_Percent_2020']].sort_values('Total', ascending=False))
 
+# Performance Analysis section
 elif section == "Performance Analysis":
     st.header("Academic Performance Analysis")
     
@@ -217,7 +217,14 @@ elif section == "Performance Analysis":
                 st.write(f"2015: {district_data_al['AL_Percent_2015'].values[0]:.1f}%")
                 st.write(f"2020: {district_data_al['AL_Percent_2020'].values[0]:.1f}%")
 
-elif section == "Resource Allocation":
-    st.header("Resource Allocation Analysis")
-    
-    st.subheader("Student-Teacher Ratio (STR) Distribution
+# Continue with the rest of the app sections...
+
+# Footer
+st.sidebar.markdown("---")
+st.sidebar.info(
+    """
+    **Data Source:** Sri Lanka Education Ministry
+    \n**Note:** This analysis focuses on government schools across districts.
+    Student-Teacher Ratio (STR) is calculated as Total Students / Total Teachers.
+    """
+)
