@@ -220,4 +220,4 @@ elif section == "Insights & Recommendations":
 
 # Footer
 st.sidebar.markdown("---")
-st.sidebar.info("Data Source: Ministry of Education, Sri Lanka")
+st.sidebar.info("Data Source: The Department of Census and Statistics, Sri Lanka")
