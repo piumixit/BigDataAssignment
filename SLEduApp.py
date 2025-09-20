@@ -55,7 +55,7 @@ st.title("📊 Student Academic Performance & Resource Allocation Analysis")
 st.markdown("Analyzing education performance, resource allocation, and enrollment trends across districts in Sri Lanka.")
 
 st.sidebar.title("Navigation")
-section = st.sidebar.radio("Go to", ["Overview", "Performance Analysis", "Resource Allocation", "District Comparison", "Insights & Recommendations"])
+section = st.sidebar.radio("Go to", ["Overview", "Performance Analysis", "District Comparison", "Insights & Recommendations"])
 
 # 1. Overview
 if section == "Overview":
