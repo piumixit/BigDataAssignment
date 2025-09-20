@@ -32,7 +32,7 @@ st.set_page_config(
 def load_data():
     try:
         # Read the CSV file
-        df = pd.read_csv('merged_dataset.csv', thousands=',')
+        df = pd.read_csv('data/merged_dataset.csv', thousands=',')
         
         # Clean column names
         df.columns = df.columns.str.strip()
